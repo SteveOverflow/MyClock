@@ -120,7 +120,7 @@ void loop() {
   displayDateTime(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
  
   showBluetooth();
-  setIcons();
+  readData();
   showIcons();
  
   display.display();
@@ -149,6 +149,20 @@ void readTime(byte *second,
   *dayOfMonth = bcdToDec(Wire.read());
   *month = bcdToDec(Wire.read());
   *year = bcdToDec(Wire.read());  
+}
+
+void setDS3231time(byte second, byte minute, byte hour, byte dayOfWeek, byte dayOfMonth, byte month, byte year){
+  // sets time and date data to DS3231
+  Wire.beginTransmission(DS3231_I2C_ADDRESS);
+  Wire.write(0); // set next input to start at the seconds register
+  Wire.write(decToBcd(second)); // set seconds
+  Wire.write(decToBcd(minute)); // set minutes
+  Wire.write(decToBcd(hour)); // set hours
+  Wire.write(decToBcd(dayOfWeek)); // set day of week (1=Sunday, 7=Saturday)
+  Wire.write(decToBcd(dayOfMonth)); // set date (1 to 31)
+  Wire.write(decToBcd(month)); // set month
+  Wire.write(decToBcd(year)); // set year (0 to 99)
+  Wire.endTransmission();
 }
 
 void displayDateTime(byte second,
@@ -185,12 +199,29 @@ void showBluetooth(){
   }
 }
 
-void setIcons(){
+byte decToBcd(byte val)
+{
+  return( (val/10*16) + (val%10) );
+}
+
+void readData(){
   while(bluetooth.available()){
     char op = bluetooth.read();
+  
     if(op=='+'||op=='-'){
        char app = bluetooth.read();
        setIconFlags(op, app);
+    }
+    if(op=='@'){
+      byte second      = bluetooth.read();
+      byte minute      = bluetooth.read();
+      byte hour        = bluetooth.read();
+      byte dayOfWeek   = bluetooth.read();
+      byte dayOfMonth  = bluetooth.read();
+      byte month       = bluetooth.read();
+      byte year        = bluetooth.read();
+      
+      setDS3231time(second, minute, hour, dayOfWeek, dayOfMonth, month, year);
     }
   }
 }
